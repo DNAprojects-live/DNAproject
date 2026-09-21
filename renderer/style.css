@@ -1,0 +1,404 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Segoe UI', 'SF Pro Text', 'Inter', Arial, sans-serif;
+  user-select: none;
+  cursor: default;
+}
+
+#menu-root { position: fixed; inset: 0; }
+
+#lines { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+#nodes { position: absolute; inset: 0; pointer-events: none; }
+
+/* ---------------- линии ---------------- */
+
+.link {
+  fill: none;
+  stroke: rgba(255,255,255,0.30);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.link.spawn { animation: draw-line 0.5s cubic-bezier(.2,.8,.3,1) both; }
+.link.vanish { animation: fade-line 0.18s ease forwards; }
+
+@keyframes draw-line {
+  from { stroke-dasharray: 700; stroke-dashoffset: 700; opacity: 0; }
+  99%  { stroke-dasharray: 700; stroke-dashoffset: 0; opacity: 1; }
+  to   { stroke-dasharray: none; stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes fade-line { to { opacity: 0; } }
+
+/* ---------------- общий узел ---------------- */
+
+.node {
+  position: absolute;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  white-space: nowrap;
+}
+
+.node:active { cursor: grabbing; }
+.node.dragging { z-index: 30; }
+
+.node.spawn { animation: node-spawn 0.42s cubic-bezier(.2,.85,.3,1) both; }
+.node.vanish { animation: node-vanish 0.19s ease forwards; pointer-events: none; }
+
+@keyframes node-spawn {
+  from {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--sx)), calc(-50% + var(--sy))) scale(0.35);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes node-vanish {
+  to {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--sx)), calc(-50% + var(--sy))) scale(0.4);
+  }
+}
+
+/* ---------------- центр ---------------- */
+
+.node.center { width: 72px; height: 72px; }
+
+.node.center .dot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.06) 45%, rgba(0,0,0,0.30) 100%);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.32);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255,255,255,0.45),
+    inset 0 -8px 14px rgba(0,0,0,0.25),
+    0 10px 22px rgba(0,0,0,0.5);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.node.center:hover .dot { transform: scale(1.06); }
+
+.node.center.open .dot {
+  box-shadow:
+    inset 0 1.5px 1px rgba(255,255,255,0.5),
+    inset 0 -8px 14px rgba(0,0,0,0.25),
+    0 0 20px rgba(255,255,255,0.4);
+}
+
+/* Кольцо дыхания вокруг центра — раньше это была бесконечная
+   анимация box-shadow, которая каждый кадр перерисовывала весь
+   заблюренный круг и грузила видеокарту постоянно, даже пока меню
+   свёрнуто. transform/opacity обходятся композитору почти бесплатно
+   и не трогают сам круг. */
+.node.center .dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.35);
+  opacity: 0;
+  animation: pulse-ring 2.6s ease-out infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.node.center .core {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 0 10px rgba(255,255,255,0.55);
+  transition: transform 0.25s ease;
+}
+
+.node.center:hover .core { transform: scale(1.15); }
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.32; }
+  70%  { transform: scale(1.4); opacity: 0; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* ---------------- узлы кольца ---------------- */
+
+.node.main { width: 60px; height: 60px; }
+
+.dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: rgba(255,255,255,0.88);
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.5), rgba(190,190,190,0.14) 42%, rgba(12,12,12,0.62) 100%);
+  border: 1px solid rgba(255,255,255,0.32);
+  box-shadow:
+    inset -3px -3px 6px rgba(0,0,0,0.5),
+    inset 2px 2px 4px rgba(255,255,255,0.3),
+    0 4px 10px rgba(0,0,0,0.45);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.dot-logo { width: 27px; height: 27px; object-fit: contain; }
+
+.node:hover .dot { transform: scale(1.08); }
+
+.node.open .dot {
+  box-shadow:
+    inset -3px -3px 6px rgba(0,0,0,0.45),
+    0 0 14px rgba(255,255,255,0.5);
+}
+
+.node.app .dot {
+  border-color: rgba(255,255,255,0.6);
+  box-shadow:
+    inset -3px -3px 6px rgba(0,0,0,0.45),
+    0 0 0 3px rgba(255,255,255,0.12),
+    0 0 18px rgba(255,255,255,0.3);
+}
+
+.dot-fallback {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.3px;
+}
+
+.dot-logo + .dot-fallback { display: none; }
+.dot-logo[data-failed="1"] + .dot-fallback { display: block; }
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -10px;
+  min-width: 26px;
+  padding: 2px 6px;
+  border-radius: 9px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  background: rgba(30,30,34,0.85);
+  border: 1px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ---------------- подпись под узлом ---------------- */
+
+.node.main .label {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.25;
+  padding: 5px 11px;
+  border-radius: 10px;
+  background: rgba(18,18,20,0.58);
+  border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+
+.node .label .name { font-size: 11px; color: rgba(255,255,255,0.92); }
+.node .label .sub { font-size: 9px; color: rgba(255,255,255,0.5); }
+
+/* ---------------- поиск ---------------- */
+
+.node.search { width: 34px; height: 34px; z-index: 20; }
+
+.search-dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16,16,18,0.88);
+  border: 1px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.node.search:hover .search-dot { transform: scale(1.1); border-color: rgba(255,255,255,0.45); }
+
+.glyph {
+  position: relative;
+  width: 11px;
+  height: 11px;
+  border: 1.4px solid rgba(255,255,255,0.75);
+  border-radius: 50%;
+}
+
+.glyph::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 6px;
+  height: 1.4px;
+  background: rgba(255,255,255,0.75);
+  transform: rotate(45deg);
+}
+
+.node.search.open { width: 260px; height: 34px; }
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 260px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 17px;
+  background: rgba(18,18,20,0.66);
+  border: 1px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 18px rgba(0,0,0,0.45);
+}
+
+.search-field input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: rgba(255,255,255,0.92);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: text;
+}
+
+.search-field input::placeholder { color: rgba(255,255,255,0.4); }
+
+/* ---------------- листья ---------------- */
+
+.chip-body {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 11px;
+  background: rgba(18,18,20,0.64);
+  border: 1px solid rgba(255,255,255,0.16);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 8px 18px rgba(0,0,0,0.45);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.node.chip:hover .chip-body {
+  background: rgba(32,32,36,0.74);
+  border-color: rgba(255,255,255,0.34);
+}
+
+.node.chip.open .chip-body { border-color: rgba(255,255,255,0.45); }
+
+.chip-body .icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.10);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.chip-body .icon.dotless {
+  background: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+}
+
+.chip-body .icon img { width: 16px; height: 16px; object-fit: contain; }
+
+.chip-body .text { display: flex; flex-direction: column; line-height: 1.25; }
+
+.chip-body .text .name {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.93);
+  font-weight: 500;
+}
+
+.chip-body .text .sub {
+  font-size: 9px;
+  color: rgba(255,255,255,0.45);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-body .arrow {
+  width: 5px;
+  height: 5px;
+  margin-left: 2px;
+  border-right: 1px solid rgba(255,255,255,0.55);
+  border-bottom: 1px solid rgba(255,255,255,0.55);
+  transform: rotate(-45deg);
+  flex-shrink: 0;
+}
+
+.node.chip.open .arrow { transform: rotate(45deg); }
+
+/* ---------------- раскрытое состояние — только оттенки серого ---------------- */
+
+.node.main.open .dot {
+  border-color: rgba(255,255,255,0.55);
+  box-shadow:
+    inset -3px -3px 6px rgba(0,0,0,0.45),
+    0 0 16px rgba(255,255,255,0.35);
+}
+
+.node.main.open .label {
+  border-color: rgba(255,255,255,0.32);
+}
+
+.node.chip .icon.dotless {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.10);
+}
+
+.node.chip.open .chip-body {
+  border-color: rgba(255,255,255,0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 0 12px rgba(255,255,255,0.18),
+    0 8px 18px rgba(0,0,0,0.45);
+}
